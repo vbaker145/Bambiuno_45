@@ -155,7 +155,7 @@ int main(void)
 	sprintf((char *) txData, "t0.txt=\"%.1f\"", calcTempC(adc) );
 	SendNextion( (char *) txData, strlen( (char *) txData ));
 
-	HAL_Delay(50);
+	HAL_Delay(100);
 
 	if(  HAL_UART_Receive(&huart1, rxData, 5, 20) != HAL_TIMEOUT ) {
 		rxData[10] = 0;
