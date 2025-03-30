@@ -103,6 +103,26 @@ double calcTempC( uint32_t adcVal )  {
 
 }
 
+uint32_t loadCellVal( ) {
+	int i;
+	uint32_t count;
+
+	HAL_GPIO_WritePin( GPIOA, GPIO_PIN_1, GPIO_PIN_RESET ); //Clear clock
+	while( HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0) == 1); //Wait for conversion
+	count = 0;
+	for( i=0; i<24; i++ ) {
+		HAL_GPIO_WritePin( GPIOA, GPIO_PIN_1, GPIO_PIN_SET );
+		count <<= 1;
+		HAL_GPIO_WritePin( GPIOA, GPIO_PIN_1, GPIO_PIN_RESET );
+	    count = count + (uint32_t) HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0);
+	}
+	HAL_GPIO_WritePin( GPIOA, GPIO_PIN_1, GPIO_PIN_SET );
+	count ^= 0x800000;
+	HAL_GPIO_WritePin( GPIOA, GPIO_PIN_1, GPIO_PIN_RESET );
+
+	return count;
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -116,6 +136,7 @@ int main(void)
   uint32_t adc;
   uint8_t rxData[10];
   uint8_t txData[20];
+  uint32_t lc;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -149,6 +170,9 @@ int main(void)
   {
 	HAL_ADC_Start(&hadc1);
 	adc = HAL_ADC_GetValue(&hadc1);
+	lc = loadCellVal();
+	sprintf((char *) txData, "t5.txt=\"%lu\"", lc );
+	SendNextion( (char *) txData, strlen( (char *) txData ));
 
 	sprintf((char *) txData, "z1.val=%lu", adc*180/4096);
 	SendNextion( (char *) txData, strlen( (char *) txData ));
@@ -385,7 +409,7 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1|LD2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;
@@ -393,12 +417,18 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : LD2_Pin */
-  GPIO_InitStruct.Pin = LD2_Pin;
+  /*Configure GPIO pin : PA0 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PA1 LD2_Pin */
+  GPIO_InitStruct.Pin = GPIO_PIN_1|LD2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
